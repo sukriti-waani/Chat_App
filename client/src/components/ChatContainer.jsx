@@ -1,5 +1,9 @@
 const ChatContainer = () => {
-  return <div></div>;
+  return (
+    <div>
+      <h1>ChatContainer</h1>
+    </div>
+  );
 };
 
 export default ChatContainer;

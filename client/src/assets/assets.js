@@ -1,6 +1,8 @@
 import bg from "./bgImage.avif";
+import logo1 from "./logo.png";
 const assets = {
   bgImage: bg,
+  logo: logo1,
 };
 export default assets;
 
