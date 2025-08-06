@@ -10,9 +10,11 @@ import pic6 from "./pic6.webp";
 import pic7 from "./pic7.jpg";
 import pic8 from "./pic8.avif";
 
-import avatar_icon from "./icons/avatar.png";
-import menu_icon from "./icons/menu.png";
-import search_icon from "./icons/search.png";
+import arrow_icon from "./arrow_icon.png";
+import avatar_icon from "./avatar_icon.png";
+import help_icon from "./help_icon.png";
+import menu_icon from "./menu_icon.png";
+import search_icon from "./search_icon.png";
 
 const assets = {
   bgImage: bg,
@@ -20,6 +22,16 @@ const assets = {
   menu_icon,
   search_icon,
   avatar_icon,
+  pic1,
+  pic2,
+  pic3,
+  pic4,
+  pic5,
+  pic6,
+  pic7,
+  pic8,
+  help_icon,
+  arrow_icon,
 };
 
 export default assets;

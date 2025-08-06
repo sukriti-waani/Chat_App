@@ -10,9 +10,15 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
         selectedUser ? "max-md:hidden" : ""
       }`}
     >
+      {/* Header with Logo and Menu */}
       <div className="pb-5">
         <div className="flex justify-between items-center">
-          <img src={assets.logo} alt="logo" className="max-w-40" />
+          <div className="flex items-center gap-1">
+            <img src={assets.logo} alt="logo" className="w-8 h-8" />
+            <span className="text-lg font-semibold">Chatio</span>
+          </div>
+
+          {/* Menu Dropdown */}
           <div className="relative py-2 group">
             <img
               src={assets.menu_icon}
@@ -32,6 +38,7 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
           </div>
         </div>
 
+        {/* Search Bar */}
         <div className="bg-[#282142] rounded-full flex items-center gap-2 py-3 px-4 mt-5">
           <img src={assets.search_icon} alt="Search" className="w-3" />
           <input
@@ -42,8 +49,9 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
         </div>
       </div>
 
+      {/* User List */}
       <div className="flex flex-col">
-        {userDummyData.map((user) => (
+        {userDummyData.map((user, index) => (
           <div
             onClick={() => setSelectedUser(user)}
             key={user._id}
@@ -60,17 +68,15 @@ const Sidebar = ({ selectedUser, setSelectedUser }) => {
               <p>{user.fullname}</p>
               <span
                 className={`text-xs ${
-                  userDummyData.indexOf(user) < 3
-                    ? "text-green-400"
-                    : "text-neutral-400"
+                  index < 3 ? "text-green-400" : "text-neutral-400"
                 }`}
               >
-                {userDummyData.indexOf(user) < 3 ? "Online" : "Offline"}
+                {index < 3 ? "Online" : "Offline"}
               </span>
             </div>
-            {userDummyData.indexOf(user) > 2 && (
+            {index > 2 && (
               <p className="absolute top-4 right-4 text-xs h-5 w-5 flex justify-center items-center rounded-full bg-violet-500/50">
-                {userDummyData.indexOf(user)}
+                {index}
               </p>
             )}
           </div>
