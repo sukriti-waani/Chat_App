@@ -1,6 +1,16 @@
+import { useEffect, useRef } from "react";
 import assets, { messagesDummyData } from "../assets/assets";
+import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = ({ selectedUser, setSelectedUser }) => {
+  const scrollEnd = useRef();
+
+  useEffect(() => {
+    if (scrollEnd.current) {
+      scrollEnd.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
+
   // fallback for avatar if user isn't set
   const receiverAvatar = selectedUser?.profilePic || assets.avatar_icon;
   const receiverName = selectedUser?.fullname || "Receiver";
@@ -97,15 +107,14 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
                   className="w-7 h-7 rounded-full"
                 />
                 <p className="text-gray-500">
-                  {new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatMessageTime(msg.createdAt)}
                 </p>
               </div>
             )}
           </div>
         ))}
+
+        <div ref={scrollEnd}></div>
       </div>
     </div>
   ) : (
