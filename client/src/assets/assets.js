@@ -10,6 +10,13 @@ import pic6 from "./pic6.webp";
 import pic7 from "./pic7.jpg";
 import pic8 from "./pic8.avif";
 
+import img1 from "./img1.jpeg";
+import img2 from "./img2.webp";
+import img3 from "./img3.jpeg";
+import img4 from "./img4.jpeg";
+import img5 from "./img5.jpg";
+import img6 from "./img6.jpg";
+
 import arrow_icon from "./arrow_icon.png";
 import avatar_icon from "./avatar_icon.png";
 import gallery_icon from "./gallery_icon.png";
@@ -36,11 +43,17 @@ const assets = {
   arrow_icon,
   gallery_icon,
   send_button,
+  img1,
+  img2,
+  img3,
+  img4,
+  img5,
+  img6,
 };
 
 export default assets;
 
-export const imagesDummyData = [pic1, pic2, pic3, pic4, pic5, pic6, pic7, pic8];
+export const imagesDummyData = [img1, img5, img4, img2, img6, img3];
 
 export const userDummyData = [
   {

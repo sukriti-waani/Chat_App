@@ -111,7 +111,6 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
       </div>
 
       {/* ------- bottom area ------- */}
-      {/* ------- bottom area ------- */}
       <div className="absolute bottom-0 left-0 w-full flex items-center gap-3 p-3 bg-transparent">
         <div className="flex-1 flex items-center bg-[#1a1a1a] px-3 rounded-full">
           <input
@@ -128,7 +127,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
             />
           </label>
         </div>
-        <button className="bg-[#082d35] hover:bg-[#021e24] rounded-full p-2 flex items-center justify-center ">
+        <button className="bg-[#2e464c] hover:bg-[#0c343d] rounded-full p-2 flex items-center justify-center ">
           <img src={assets.send_button} alt="Send" className="w-6 h-6" />
         </button>
       </div>
