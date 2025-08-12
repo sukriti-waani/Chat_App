@@ -1,4 +1,4 @@
-import bg from "./bgImage.avif";
+import bg from "./bg.jpg";
 import logo1 from "./logo.png";
 
 import pic1 from "./pic1.jpg";
@@ -12,9 +12,11 @@ import pic8 from "./pic8.avif";
 
 import arrow_icon from "./arrow_icon.png";
 import avatar_icon from "./avatar_icon.png";
+import gallery_icon from "./gallery_icon.png";
 import help_icon from "./help_icon.png";
 import menu_icon from "./menu_icon.png";
 import search_icon from "./search_icon.png";
+import send_button from "./send_button.png";
 
 const assets = {
   bgImage: bg,
@@ -32,6 +34,8 @@ const assets = {
   pic8,
   help_icon,
   arrow_icon,
+  gallery_icon,
+  send_button,
 };
 
 export default assets;
