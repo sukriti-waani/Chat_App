@@ -48,10 +48,7 @@ const RightSidebar = ({ selectedUser }) => {
 
       {/* Logout Button - fixed outside scroll */}
       <div className="mt-4">
-        <button
-          className="w-full bg-gradient-to-r from-[#02d1ff] to-[#021e24] hover:from-[#021e24] hover:to-[#082d35] 
-                     text-white text-sm font-light py-2 px-6 rounded-full cursor-pointer"
-        >
+        <button className="w-full bg-gradient-to-r from-[#02d1ff] to-[#021e24] hover:from-[#021e24] hover:to-[#082d35] text-white text-sm font-light py-2 px-6 rounded-full cursor-pointer">
           Logout
         </button>
       </div>
