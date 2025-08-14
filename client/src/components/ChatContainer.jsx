@@ -112,7 +112,7 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
 
       {/* ------- bottom area ------- */}
       <div className="absolute bottom-0 left-0 w-full flex items-center gap-3 p-3 bg-transparent">
-        <div className="flex-1 flex items-center bg-[#1a1a1a] px-3 rounded-full">
+        <div className="flex-1 flex items-center bg-[#1a1a1a] px-3 rounded-full hover:border hover:border-[#026c7a]">
           <input
             type="text"
             placeholder="Send a message"
