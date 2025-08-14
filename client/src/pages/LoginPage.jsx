@@ -29,8 +29,17 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-cover bg-center flex items-center justify-center gap-8 sm:justify-evenly max-sm:flex-col backdrop-blur-2xl">
-      {/* Left Section - Logo */}
-      <img src={assets.logo} alt="" className="w-[min(30vw,250px)]" />
+      {/* Left Section - Logo with Heading */}
+      <div className="flex flex-col items-center">
+        <img
+          src={assets.logo}
+          alt="Chatio Logo"
+          className="w-[min(30vw,220px)] mb-0"
+        />
+        <h1 className="text-8xl font-bold text-white font-[Poppins] tracking-wide">
+          Chatio
+        </h1>
+      </div>
 
       {/* Right Section - Form */}
       <form
@@ -39,15 +48,16 @@ const LoginPage = () => {
         className="border-2 border-[#026c7a] bg-white/10 text-white p-6 flex flex-col gap-6 rounded-lg shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-[#026c7a]/40"
       >
         {/* Heading with state label + arrow icon */}
-        <h2 className="font-medium text-2xl flex justify-between items-center text-[#e0f7fa]">
-          {currState}
+        <h2 className="flex justify-center items-center w-full">
+          <span className="text-3xl font-extrabold bg-gradient-to-r from-[#0cadc3] to-[#026c7a] bg-clip-text text-transparent drop-shadow-md tracking-wide">
+            {currState}
+          </span>
           {isDataSubmitted && (
             <img
               onClick={() => setIsDataSubmitted(false)}
-              // Clicking arrow resets back to first step in sign-up
               src={assets.arrow_icon}
-              alt=""
-              className="w-5 cursor-pointer"
+              alt="Back"
+              className="w-5 cursor-pointer hover:scale-110 transition-transform"
             />
           )}
         </h2>

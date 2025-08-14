@@ -127,14 +127,14 @@ const ChatContainer = ({ selectedUser, setSelectedUser }) => {
             />
           </label>
         </div>
-        <button className="bg-[#2e464c] hover:bg-[#0c343d] rounded-full p-2 flex items-center justify-center ">
+        <button className="bg-[#2e464c] hover:bg-[#074553] rounded-full p-2 flex items-center justify-center ">
           <img src={assets.send_button} alt="Send" className="w-6 h-6" />
         </button>
       </div>
     </div>
   ) : (
     <div className="flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden">
-      <img src={assets.logo} className="max-w-16" alt="logo" />
+      <img src={assets.logo} className="w-[180px] h-[160px]" alt="logo" />
       <p className="text-lg font-medium text-white">Chat anytime, anywhere</p>
     </div>
   );
