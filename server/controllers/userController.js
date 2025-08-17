@@ -64,3 +64,47 @@ export const signup = async (req, res) => {
     });
   }
 };
+
+// Controller to login a user
+export const login = async (req, res) => {
+  try {
+    // Step 1: Extract email and password from the request body
+    const { email, password } = req.body;
+
+    // Step 2: Find the user in the database by their email
+    const userData = await User.findOne({ email });
+
+    // If no user found, return error response
+    if (!userData) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    // Step 3: Compare the entered plain-text password with the stored hashed password
+    // bcrypt.compare(plainPassword, hashedPassword)
+    const isPasswordCorrect = await bcrypt.compare(password, userData.password);
+
+    // If password does not match, return invalid credentials
+    if (!isPasswordCorrect) {
+      return res.json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Step 4: Generate JWT token for the logged-in user
+    const token = generateToken(userData._id);
+
+    // Step 5: Send success response back to client with user data and token
+    res.json({
+      success: true,
+      userData, // user info from database
+      token, // JWT token for authentication
+      message: "Login Successful",
+    });
+  } catch (error) {
+    // Step 6: Handle errors (DB issues, bcrypt issues, etc.)
+    console.log(error.message);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
