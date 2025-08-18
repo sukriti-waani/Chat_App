@@ -1,7 +1,6 @@
-// Importing express framework
 import express from "express";
 
-// Importing controller functions (business logic for user routes)
+// Importing controller functions
 import {
   checkAuth, // To check if user is authenticated
   login, // To handle user login
