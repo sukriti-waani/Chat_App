@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utils.js";
 
 // Importing the User model (MongoDB schema for storing user data)
+import cloudinary from "../lib/cloudinary.js";
 import User from "../models/User.js";
 
 // Controller function to handle signup of a new user
@@ -106,5 +107,54 @@ export const login = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// Controller to check if user is authenticated
+// This function simply returns the user object stored in req.user
+// (which is usually set by authentication middleware like JWT or Passport).
+export const checkAuth = (req, res) => {
+  // Respond with a success message and the authenticated user data
+  res.json({ success: true, user: req.user });
+};
+
+// Controller to update user profile details
+// This function allows users to update their profile (profile picture, bio, full name).
+export const updateProfile = async (req, res) => {
+  try {
+    // Extract profile details from the request body
+    const { profilePic, bio, fullName } = req.body;
+
+    // Get the logged-in user's ID from req.user (set by auth middleware)
+    const userId = req.user._id;
+    let updatedUser;
+
+    // CASE 1: If no profile picture is provided
+    if (!profilePic) {
+      // Update only bio and fullName fields in the database
+      updatedUser = await User.findByIdAndUpdate(
+        userId, // Find user by ID
+        { bio, fullName }, // Fields to update
+        { new: true } // Return updated user document instead of old one
+      );
+    } else {
+      // CASE 2: If profile picture is provided
+      // Upload the picture to Cloudinary
+      const upload = await cloudinary.uploader.upload(profilePic);
+
+      // Update profilePic (with Cloudinary URL), bio, and fullName
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { profilePic: upload.secure_url, bio, fullName },
+        { new: true }
+      );
+    }
+
+    // Send response with updated user data
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    // If something goes wrong, log the error and send failure response
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
   }
 };
