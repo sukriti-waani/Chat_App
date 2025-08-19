@@ -6,9 +6,45 @@ import { connectDB } from "./lib/db.js"; // Custom function to connect to MongoD
 import messageRouter from "./routes/messageRouters.js";
 import userRouter from "./routes/userRoutes.js"; // Import user-related routes
 
+import { Server } from "socket.io";
+
 // Create Express app and HTTP server
 const app = express();
 const server = http.createServer(app); // Create an HTTP server using Express app
+
+// Initialize socket.io server
+export const io = new Server(Server, {
+  // Allow connections from any frontend (CORS enabled for all origins)
+  cors: { origin: "*" },
+});
+
+// Store online users in an object
+// Format: { userId: socketId }
+export const userSocketMap = {};
+
+// Socket.io connection handler -> runs when a client connects
+io.on("connection", (socket) => {
+  // Get the userId passed by the client when connecting
+  const userId = socket.handshake.query.userId;
+  console.log("User Connected", userId);
+
+  // If userId exists, store mapping of userId to the connected socket.id
+  if (userId) userSocketMap[userId] = socket.id;
+
+  // Send the list of currently online users to all connected clients
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // Listen for disconnection event
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", userId);
+
+    // Remove user from online users map when they disconnect
+    delete userSocketMap[userId];
+
+    // Update all clients with the new list of online users
+    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  });
+});
 
 // Middleware setup
 app.use(express.json({ limit: "4mb" })); // Parse incoming JSON requests with body size limit of 4MB

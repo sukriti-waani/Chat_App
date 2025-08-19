@@ -1,5 +1,7 @@
+import cloudinary from "../lib/cloudinary.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
+import { io, userSocketMap } from "../server.js";
 
 // Controller: Get all users for sidebar (except the logged-in user)
 // Also count unseen messages from each user
@@ -97,6 +99,55 @@ export const markMessageAsSeen = async (req, res) => {
     console.log(error.message);
 
     // Send failure response with error message
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Controller function to send a message to the selected user
+export const sendMessage = async (req, res) => {
+  try {
+    // Extract text and image from the request body (message content sent by frontend)
+    const { text, image } = req.body;
+
+    // Get the receiver's ID from the URL parameter (example: /messages/send/:id)
+    const receiverId = req.params.id;
+
+    // Get the sender's ID from the logged-in user (set by protectRoute middleware)
+    const senderId = req.user._id;
+
+    // Variable to hold image URL (if an image is provided by sender)
+    let imageUrl;
+
+    // If the user attached an image, upload it to Cloudinary
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image);
+      // Store the secure URL returned from Cloudinary
+      imageUrl = uploadResponse.secure_url;
+    }
+
+    // Create a new message document in the database with sender, receiver, text, and optional image
+    const newMessage = await Message.create({
+      senderId, // Who sent the message
+      receiverId, // Who should receive the message
+      text, // The text content
+      image: imageUrl, // Image link if provided, otherwise undefined
+    });
+
+    // Find the receiver's socket ID (from userSocketMap which stores online users)
+    const receiverSocketId = userSocketMap[receiverId];
+
+    // If the receiver is online, send (emit) the new message to their socket in real-time
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    // Send success response back to the sender with the newly created message
+    res.json({ success: true, newMessage });
+  } catch (error) {
+    // If something goes wrong, log the error in server console
+    console.log(error.message);
+
+    // Send failure response to the client with error details
     res.json({ success: false, message: error.message });
   }
 };
