@@ -1,6 +1,5 @@
-import mongoose from "mongoose"; // Import mongoose library for MongoDB object modeling
+import mongoose from "mongoose";
 
-// Define schema (structure) for messages
 const messageSchema = new mongoose.Schema(
   {
     senderId: {
