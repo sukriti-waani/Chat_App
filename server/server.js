@@ -12,8 +12,8 @@ import { Server } from "socket.io";
 const app = express();
 const server = http.createServer(app); // Create an HTTP server using Express app
 
-// Initialize socket.io server
-export const io = new Server(Server, {
+// Initialize socket.io server with the http server instance
+export const io = new Server(server, {
   // Allow connections from any frontend (CORS enabled for all origins)
   cors: { origin: "*" },
 });
@@ -61,4 +61,3 @@ await connectDB(); // Establish connection to MongoDB before starting server
 // Define port and start server
 const PORT = process.env.PORT || 5000; // Get port from environment or fallback to 5000
 server.listen(PORT, () => console.log("Server is running on PORT:" + PORT));
-// Start HTTP server and log the running port

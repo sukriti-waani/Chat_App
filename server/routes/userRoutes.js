@@ -6,10 +6,10 @@ import {
   login, // To handle user login
   signup, // To handle user signup
   updateProfile, // To update user profile
-} from "../controllers/userController";
+} from "../controllers/userController.js";
 
 // Importing middleware to protect routes (ensures user is logged in)
-import { protectRoute } from "../middleware/auth";
+import { protectRoute } from "../middleware/auth.js";
 
 // Create a new Express Router instance (to define routes separately)
 const userRouter = express.Router();
