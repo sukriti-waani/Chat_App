@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { AuthContext } from "../../context/AuthContext";
 import assets from "../assets/assets";
 
 const LoginPage = () => {
@@ -6,13 +7,15 @@ const LoginPage = () => {
   const [currState, setCurrState] = useState("Sign up");
 
   // Controlled input states for form fields
-  const [FullName, setFullName] = useState("");
+  const [fullName, setfullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bio, setBio] = useState("");
 
   // Tracks whether the first step of data has been submitted
   const [isDataSubmitted, setIsDataSubmitted] = useState(false);
+
+  const { login } = useContext(AuthContext);
 
   const onSubmitHandler = (event) => {
     event.preventDefault();
@@ -24,6 +27,12 @@ const LoginPage = () => {
       return;
     }
     // If in login mode or bio step, this is where you would handle API calls
+    login(currState === "Sign up" ? "signup" : "login", {
+      fullName,
+      email,
+      password,
+      bio,
+    });
   };
   // onSubmitHandler → Handles the form submission logic based on current mode and step
 
@@ -65,9 +74,9 @@ const LoginPage = () => {
         {/* Full Name input - Only in Sign up mode before submitting data */}
         {currState === "Sign up" && !isDataSubmitted && (
           <input
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => setfullName(e.target.value)}
             // Updates FullName state on input change
-            value={FullName}
+            value={fullName}
             type="text"
             className="p-2 border border-[#026c7a] bg-transparent text-white placeholder-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0394a7] hover:border-[#0394a7] hover:bg-white/5"
             placeholder="Full Name"

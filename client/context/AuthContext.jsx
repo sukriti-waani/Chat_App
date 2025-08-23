@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
         toast.success(data.message);
       } else {
         // If success is false → show error message (probably login failed)
-        toast.error(error.message);
+        toast.error(data.message);
       }
     } catch (error) {
       // Catch any error (like server error, network failure) and show as a toast
