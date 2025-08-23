@@ -1,22 +1,50 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import assets from "../assets/assets";
 
 const ProfilePage = () => {
+  // Importing `authUser` (the currently logged in user's data)
+  // and `updateProfile` (a function to update user profile info)
+  // from AuthContext using React's useContext hook.
+  const { authUser, updateProfile } = useContext(AuthContext);
+
   // Stores profile avatar image file
   const [selectedImg, setSelectedImg] = useState(null);
 
   // For navigation after form submission
   const navigate = useNavigate();
 
-  // User name and bio states (controlled inputs)
-  const [name, setName] = useState("Martin Johnson");
-  const [bio, setBio] = useState("Hi everyone, I'm using Chatio");
+  // Create state variables for controlled inputs (form fields).
+  // Initialize them with values from the logged-in user's profile.
+  const [name, setName] = useState(authUser.fullName); // Tracks "Name" input field
+  const [bio, setBio] = useState(authUser.bio); // Tracks "Bio" input field
 
-  // Handles profile save button click
-  const handleSubmit = (e) => {
-    e.preventDefault(); // prevent reload
-    navigate("/"); // navigate back to homepage (temp logic)
+  // Function to handle form submission (when user clicks "Save" button).
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevents the default form submission (which refreshes the page).
+
+    // Case 1: If the user did not select a new profile picture
+    if (!selectedImg) {
+      // Update only fullName and bio in the user's profile
+      await updateProfile({ fullName: name, bio });
+      navigate("/"); // After saving, redirect to homepage (temporary navigation logic)
+      return; // Exit function here since no image needs processing
+    }
+
+    // Case 2: If a new profile picture (file) is selected
+    const reader = new FileReader(); // Create a new FileReader to read the uploaded file
+    reader.readAsDataURL(selectedImg); // Read file as a Base64-encoded data URL
+
+    // This event triggers once file reading is complete
+    reader.onload = async () => {
+      const base64Image = reader.result; // Get the Base64-encoded string of the image
+
+      // Update profile with image + fullName + bio
+      await updateProfile({ profilePic: base64Image, fullName: name, bio });
+
+      navigate("/"); // After saving, redirect to homepage
+    };
   };
 
   return (
@@ -101,8 +129,10 @@ const ProfilePage = () => {
 
         {/* SIDE IMAGE SECTION */}
         <img
-          className="max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 transition-transform duration-300 hover:scale-105"
-          src={assets.logo}
+          className={`max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 transition-transform duration-300 hover:scale-105 ${
+            selectedImg && "rounded-full"
+          }`}
+          src={authUser.profilePic || assets.logo}
           alt="Logo"
         />
       </div>

@@ -26,7 +26,7 @@ const LoginPage = () => {
       // Moves user to next step (bio input) in sign-up process
       return;
     }
-    // If in login mode or bio step, this is where you would handle API calls
+    // If in login mode or bio step, this is where we would handle API calls
     login(currState === "Sign up" ? "signup" : "login", {
       fullName,
       email,
