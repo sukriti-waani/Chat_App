@@ -7,6 +7,8 @@ import { BrowserRouter } from "react-router-dom";
 // Import AuthProvider from your context to provide authentication state globally
 import { AuthProvider } from "../context/AuthContext.jsx";
 
+import { ChatProvider } from "../context/ChatContext.jsx";
+
 import App from "./App.jsx";
 import "./index.css";
 
@@ -17,8 +19,10 @@ createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     {/* Wrap the app with AuthProvider to give access to authentication context */}
     <AuthProvider>
-      {/* Render the main App component */}
-      <App />
+      <ChatProvider>
+        {/* Render the main App component */}
+        <App />
+      </ChatProvider>
     </AuthProvider>
   </BrowserRouter>
 );
