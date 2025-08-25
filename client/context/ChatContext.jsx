@@ -1,5 +1,5 @@
 // Import React utilities
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 // Import AuthContext to reuse authentication-related data (axios, socket)
 import { AuthContext } from "./AuthContext";
@@ -104,6 +104,25 @@ export const ChatProvider = ({ children }) => {
       }
     });
   };
+
+  // Function to unsubscribe from messages
+  const unsubscribeFromMessages = () => {
+    // If socket connection exists, remove the "newMessage" event listener
+    // This prevents duplicate listeners when component re-renders or unmounts
+    if (socket) socket.off("newMessage");
+  };
+
+  // React hook that runs side effects when 'socket' or 'selectedUser' changes
+  useEffect(() => {
+    // Subscribe to incoming messages when socket or selected user changes
+    subscribeToMessages();
+
+    // Cleanup function: unsubscribe when component unmounts
+    // OR before re-running the effect (to avoid memory leaks / multiple listeners)
+    return () => unsubscribeFromMessages();
+
+    // Dependencies: effect re-runs whenever 'socket' or 'selectedUser' changes
+  }, [socket, selectedUser]);
 
   // Create a value object that holds all states and functions
   // This will be accessible anywhere inside ChatContext
