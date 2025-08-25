@@ -45,6 +45,66 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  // function to send message to selected user
+  const sendMessage = async (messageData) => {
+    try {
+      // Make an HTTP POST request to backend API to send message to the selected user
+      // "selectedUser._id" is the recipient's ID
+      // "messageData" contains the message content (like text, timestamp, etc.)
+      const { data } = await axios.post(
+        `/api/messages/send/${selectedUser._id}`,
+        messageData
+      );
+
+      // If backend confirms message was successfully sent
+      if (data.success) {
+        // Add the newly sent message to local state 'messages'
+        // (prevMessages = previous messages, then append new one at end)
+        setMessages((prevMessages) => [...prevMessages, data.newMessage]);
+      } else {
+        // If backend responded with failure, show error toast
+        toast.error(data.message);
+      }
+    } catch (error) {
+      // If network error / server error occurs, show the error message
+      toast.error(error.message);
+    }
+  };
+
+  // function to subscribe to messages for selected user
+  const subscribeToMessages = async () => {
+    // If socket connection is not available, just exit
+    if (!socket) return;
+
+    // Listen for "newMessage" event coming from socket server
+    socket.on("newMessage", (newMessage) => {
+      // Case 1: If a user is selected in chat AND
+      // the incoming message is from that selected user
+      if (selectedUser && newMessage.senderId === selectedUser._id) {
+        // Mark this message as seen immediately
+        newMessage.seen = true;
+
+        // Add it to the 'messages' state (append to existing conversation)
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+        // Update backend to mark this message as "seen" in DB
+        axios.put(`/api/messages/mark/${newMessage._id}`);
+      }
+      // Case 2: If message is from some other user (not the one currently selected)
+      else {
+        // Update unseen messages count for that sender
+        // If already has unseen count, increment it by 1
+        // Otherwise, initialize with 1
+        setUnseenMessages((prevUnseenMessages) => ({
+          ...prevUnseenMessages,
+          [newMessage.senderId]: prevUnseenMessages[newMessage.senderId]
+            ? prevUnseenMessages[newMessage.senderId] + 1
+            : 1,
+        }));
+      }
+    });
+  };
+
   // Create a value object that holds all states and functions
   // This will be accessible anywhere inside ChatContext
   const value = {
