@@ -14,7 +14,7 @@ export const ChatContext = createContext();
 // and provides chat-related context values
 export const ChatProvider = ({ children }) => {
   // Store all chat messages for the currently active conversation
-  const [messages, setMessages] = useState([]);
+  const [messages, getMessages] = useState([]);
 
   // Store list of all users who can chat (shown in sidebar or list)
   const [users, setUsers] = useState([]);
@@ -60,7 +60,7 @@ export const ChatProvider = ({ children }) => {
       if (data.success) {
         // Add the newly sent message to local state 'messages'
         // (prevMessages = previous messages, then append new one at end)
-        setMessages((prevMessages) => [...prevMessages, data.newMessage]);
+        getMessages((prevMessages) => [...prevMessages, data.newMessage]);
       } else {
         // If backend responded with failure, show error toast
         toast.error(data.message);
@@ -85,7 +85,7 @@ export const ChatProvider = ({ children }) => {
         newMessage.seen = true;
 
         // Add it to the 'messages' state (append to existing conversation)
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
+        getMessages((prevMessages) => [...prevMessages, newMessage]);
 
         // Update backend to mark this message as "seen" in DB
         axios.put(`/api/messages/mark/${newMessage._id}`);
@@ -128,7 +128,7 @@ export const ChatProvider = ({ children }) => {
   // This will be accessible anywhere inside ChatContext
   const value = {
     messages, // chat messages
-    setMessages,
+    getMessages,
     users, // list of users
     setUsers,
     selectedUser, // active chat user

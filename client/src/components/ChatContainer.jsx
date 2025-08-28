@@ -1,13 +1,12 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
-import { AuthContext } from "../../context/AuthContext";
-import { ChatContext } from "../../context/ChatContext";
-import assets, { messagesDummyData } from "../assets/assets";
-import { formatMessageTime } from "../lib/utils";
+import { useContext, useEffect, useRef, useState } from "react"; // React hooks
+import { AuthContext } from "../../context/AuthContext"; // Auth info/context
+import { ChatContext } from "../../context/ChatContext"; // Chat data/context
+import assets from "../assets/assets"; // Image assets/icons
+import { formatMessageTime } from "../lib/utils"; // Time formatting utility
 
 const ChatContainer = () => {
   // Extract chat-related data and functions from context
-  const { messages, selectedUser, setSelectedUser, sendMessage } =
+  const { messages, selectedUser, setSelectedUser, sendMessage, getMessages } =
     useContext(ChatContext);
 
   // Extract auth-related data from context
@@ -44,9 +43,16 @@ const ChatContainer = () => {
     reader.readAsDataURL(file);
   };
 
+  // Fetch messages when selected user changes
+  useEffect(() => {
+    if (selectedUser) {
+      getMessages(selectedUser._id);
+    }
+  }, [selectedUser]);
+
   // Auto-scroll to bottom whenever messages change
   useEffect(() => {
-    if (scrollEnd.current) {
+    if (scrollEnd.current && messages) {
       scrollEnd.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
@@ -55,29 +61,21 @@ const ChatContainer = () => {
   const receiverAvatar = selectedUser?.profilePic || assets.avatar_icon;
   const receiverName = selectedUser?.fullname || "Receiver";
 
-  // Dummy conversation data (for testing UI)
-  const conversationData = messagesDummyData.map((msg, index) => {
-    const isReceiver = index % 2 === 0;
-    return {
-      ...msg,
-      avatar: isReceiver ? receiverAvatar : assets.avatar_icon,
-      isReceiver,
-    };
-  });
-
   // -------------------- JSX --------------------
   return selectedUser ? (
     <div className="h-full overflow-scroll relative backdrop-blur-lg">
       {/* ------ header ------ */}
       <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
         <img
-          src={receiverAvatar}
+          src={selectedUser.profilePic || assets.avatar_icon}
           alt="Profile"
           className="w-10 h-10 rounded-full object-cover border border-white"
         />
         <p className="flex-1 text-lg text-white flex items-center gap-2">
-          {receiverName}
-          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+          {selectedUser.fullname}
+          {onlineUsers.includes(selectedUser._id) && (
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+          )}
         </p>
         <img
           onClick={() => setSelectedUser(null)}
@@ -94,29 +92,28 @@ const ChatContainer = () => {
 
       {/* ----- Chat Area ------ */}
       <div className="flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6">
-        {conversationData.map((msg, idx) => (
+        {(Array.isArray(messages) ? messages : []).map((msg, idx) => (
           <div
             key={idx}
             className={`flex items-end gap-2 mb-4 ${
-              msg.isReceiver ? "justify-start" : "justify-end"
+              msg.senderId !== authUser._id ? "flex-row-reverse" : ""
             }`}
           >
-            {/* Receiver message with avatar on left */}
-            {msg.isReceiver && (
-              <div className="text-center text-xs">
-                <img
-                  src={msg.avatar}
-                  alt="Profile"
-                  className="w-7 h-7 rounded-full"
-                />
-                <p className="text-gray-500">
-                  {new Date(msg.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-            )}
+            {/* Avatar and message timestamp */}
+            <div className="text-center text-xs">
+              <img
+                src={
+                  msg.senderId === authUser._id
+                    ? authUser?.profilePic || assets.avatar_icon
+                    : selectedUser?.profilePic || assets.avatar_icon
+                }
+                alt=""
+                className="w-7 rounded-full"
+              />
+              <p className="text-gray-500">
+                {formatMessageTime(msg.createdAt)}
+              </p>
+            </div>
 
             {/* Message content (image or text) */}
             {msg.image ? (
@@ -127,32 +124,17 @@ const ChatContainer = () => {
               />
             ) : (
               <p
-                className={`p-2 max-w-[200px] md:text-sm font-light rounded-lg break-all ${
-                  msg.isReceiver
-                    ? "bg-violet-500/30 text-white rounded-bl-none"
-                    : "bg-blue-500/30 text-white rounded-br-none"
+                className={`p-2 max-w-[200px] md:text-sm font-light rounded-lg break-all bg-violet-500/30 text-white ${
+                  msg.senderId === authUser._id
+                    ? "rounded-br-none"
+                    : "rounded-bl-none"
                 }`}
               >
                 {msg.text}
               </p>
             )}
-
-            {/* Sender message with avatar on right */}
-            {!msg.isReceiver && (
-              <div className="text-center text-xs">
-                <img
-                  src={msg.avatar}
-                  alt="Profile"
-                  className="w-7 h-7 rounded-full"
-                />
-                <p className="text-gray-500">
-                  {formatMessageTime(msg.createdAt)}
-                </p>
-              </div>
-            )}
           </div>
         ))}
-
         {/* Always scroll to end of chat */}
         <div ref={scrollEnd}></div>
       </div>
@@ -188,7 +170,7 @@ const ChatContainer = () => {
         {/* Send button */}
         <button
           onClick={handleSendMessage}
-          className="bg-[#2e464c] hover:bg-[#074553] rounded-full p-2 flex items-center justify-center "
+          className="bg-[#2e464c] hover:bg-[#074553] rounded-full p-2 flex items-center justify-center"
         >
           <img src={assets.send_button} alt="Send" className="w-6 h-6" />
         </button>
