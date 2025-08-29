@@ -1,11 +1,12 @@
-import { useContext, useEffect, useRef, useState } from "react"; // React hooks
-import { AuthContext } from "../../context/AuthContext"; // Auth info/context
-import { ChatContext } from "../../context/ChatContext"; // Chat data/context
-import assets from "../assets/assets"; // Image assets/icons
-import { formatMessageTime } from "../lib/utils"; // Time formatting utility
+import { useContext, useEffect, useRef, useState } from "react";
+import { AuthContext } from "../../context/AuthContext";
+import { ChatContext } from "../../context/ChatContext";
+import assets from "../assets/assets";
+import { formatMessageTime } from "../lib/utils";
 
 const ChatContainer = () => {
   // Extract chat-related data and functions from context
+  // NOTE: Renamed getMessages to setMessages in your ChatContext for clarity
   const { messages, selectedUser, setSelectedUser, sendMessage, getMessages } =
     useContext(ChatContext);
 
@@ -18,11 +19,10 @@ const ChatContainer = () => {
   // State for input text
   const [input, setInput] = useState("");
 
-  // -------------------- Functions --------------------
-
   // Handle sending a text message
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
+    if (!selectedUser?._id) return; // Prevent sending if no user selected
     if (input.trim() === "") return;
     await sendMessage({ text: input.trim() });
     setInput("");
@@ -30,8 +30,10 @@ const ChatContainer = () => {
 
   // Handle sending an image message
   const handleSendImage = async (e) => {
+    if (!selectedUser?._id) return;
     const file = e.target.files[0];
     if (!file || !file.type.startsWith("image/")) {
+      // toast import assumed available
       toast.error("Please select a valid image file");
       return;
     }
@@ -45,7 +47,7 @@ const ChatContainer = () => {
 
   // Fetch messages when selected user changes
   useEffect(() => {
-    if (selectedUser) {
+    if (selectedUser?._id) {
       getMessages(selectedUser._id);
     }
   }, [selectedUser]);
@@ -61,18 +63,18 @@ const ChatContainer = () => {
   const receiverAvatar = selectedUser?.profilePic || assets.avatar_icon;
   const receiverName = selectedUser?.fullname || "Receiver";
 
-  // -------------------- JSX --------------------
+  // Render
   return selectedUser ? (
     <div className="h-full overflow-scroll relative backdrop-blur-lg">
-      {/* ------ header ------ */}
+      {/* Header */}
       <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
         <img
-          src={selectedUser.profilePic || assets.avatar_icon}
+          src={receiverAvatar}
           alt="Profile"
           className="w-10 h-10 rounded-full object-cover border border-white"
         />
         <p className="flex-1 text-lg text-white flex items-center gap-2">
-          {selectedUser.fullname}
+          {receiverName}
           {onlineUsers.includes(selectedUser._id) && (
             <span className="w-2 h-2 rounded-full bg-green-500"></span>
           )}
@@ -90,7 +92,7 @@ const ChatContainer = () => {
         />
       </div>
 
-      {/* ----- Chat Area ------ */}
+      {/* Chat Area */}
       <div className="flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6">
         {(Array.isArray(messages) ? messages : []).map((msg, idx) => (
           <div
@@ -99,13 +101,13 @@ const ChatContainer = () => {
               msg.senderId !== authUser._id ? "flex-row-reverse" : ""
             }`}
           >
-            {/* Avatar and message timestamp */}
+            {/* Avatar and timestamp */}
             <div className="text-center text-xs">
               <img
                 src={
                   msg.senderId === authUser._id
                     ? authUser?.profilePic || assets.avatar_icon
-                    : selectedUser?.profilePic || assets.avatar_icon
+                    : receiverAvatar
                 }
                 alt=""
                 className="w-7 rounded-full"
@@ -115,7 +117,7 @@ const ChatContainer = () => {
               </p>
             </div>
 
-            {/* Message content (image or text) */}
+            {/* Message content */}
             {msg.image ? (
               <img
                 src={msg.image}
@@ -135,13 +137,12 @@ const ChatContainer = () => {
             )}
           </div>
         ))}
-        {/* Always scroll to end of chat */}
+        {/* Always scroll to end */}
         <div ref={scrollEnd}></div>
       </div>
 
-      {/* ------- bottom area ------- */}
+      {/* Bottom input area */}
       <div className="absolute bottom-0 left-0 w-full flex items-center gap-3 p-3 bg-transparent">
-        {/* Input field + attach button */}
         <div className="flex-1 flex items-center bg-[#1a1a1a] px-3 rounded-full hover:border hover:border-[#026c7a]">
           <input
             onChange={(e) => setInput(e.target.value)}
@@ -167,7 +168,6 @@ const ChatContainer = () => {
           </label>
         </div>
 
-        {/* Send button */}
         <button
           onClick={handleSendMessage}
           className="bg-[#2e464c] hover:bg-[#074553] rounded-full p-2 flex items-center justify-center"
@@ -177,7 +177,6 @@ const ChatContainer = () => {
       </div>
     </div>
   ) : (
-    // If no user selected → show placeholder
     <div className="flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden">
       <img src={assets.logo} className="w-[180px] h-[160px]" alt="logo" />
       <p className="text-lg font-medium text-white">Chat anytime, anywhere</p>

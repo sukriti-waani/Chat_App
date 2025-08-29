@@ -137,6 +137,7 @@ export const ChatProvider = ({ children }) => {
     setUnseenMessages,
     getUsers, // function to fetch users
     socket, // expose socket for real-time chat
+    sendMessage,
   };
 
   // Return the Provider component
