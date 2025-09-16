@@ -1,146 +1,197 @@
-// Import React utilities
+// Import React utilities for state management, context sharing, and side effects
 import { createContext, useContext, useEffect, useState } from "react";
 
-// Import AuthContext to reuse authentication-related data (axios, socket)
-import { AuthContext } from "./AuthContext";
-
-// Import toast for showing error notifications
+// Import toast library to show notification messages (like errors)
 import toast from "react-hot-toast";
 
-// Create a ChatContext that will hold chat-related state and functions
+// Import AuthContext to get authentication info, axios, and socket
+import { AuthContext } from "./AuthContext";
+
+// ---------------- CREATE CONTEXT ----------------
+// Creating a new context called ChatContext that will be used to share chat state globally
 export const ChatContext = createContext();
 
-// Define the ChatProvider component, which wraps children components
-// and provides chat-related context values
+// ---------------- CHAT PROVIDER ----------------
+// The provider component wraps the app/components that need access to chat data
 export const ChatProvider = ({ children }) => {
-  // Store all chat messages for the currently active conversation
-  const [messages, getMessages] = useState([]);
+  // ---------------- STATE VARIABLES ----------------
 
-  // Store list of all users who can chat (shown in sidebar or list)
+  // messages: stores the list of chat messages for the currently selected user
+  const [messages, setMessages] = useState([]);
+
+  // users: stores the list of all users who can chat
   const [users, setUsers] = useState([]);
 
-  // Track which user is currently selected for chatting
+  // selectedUser: stores the user object for whom the chat is currently open
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Track unseen/unread messages (for showing badges/notifications)
-  const [unseenMessages, setUnseenMessages] = useState([]);
+  // unseenMessages: stores the count of unread messages per user
+  // Example: { userId1: 2, userId2: 5 }
+  const [unseenMessages, setUnseenMessages] = useState({});
 
-  // Get socket (real-time connection) and axios (API calls) from AuthContext
-  const { socket, axios } = useContext(AuthContext);
+  // ---------------- AUTH & SOCKET ----------------
 
-  // Function to fetch all users + unseen messages from backend
+  // Get socket, axios instance, and logged-in user from AuthContext
+  const { socket, axios, authUser } = useContext(AuthContext);
+
+  // ---------------- GET USERS ----------------
+  // Fetch list of users from the backend API
   const getUsers = async () => {
     try {
-      // Make GET request to backend API
-      const { data } = await axios.get("/api/messages/users");
+      const { data } = await axios.get("/api/messages/users"); // GET request to fetch users
 
-      // If backend responds with success, update users and unseen messages
       if (data.success) {
-        setUsers(data.users);
-        setUnseenMessages(data.unseenMessages);
+        // Map users and add an 'online' property (default to false if not provided)
+        const usersWithStatus = (data.users || []).map((user) => ({
+          ...user,
+          online: user.online || false,
+        }));
+
+        setUsers(usersWithStatus); // Update users state
+        setUnseenMessages(data.unseenMessages || {}); // Update unseen messages state
       }
     } catch (error) {
-      // Show error notification if API call fails
-      toast.error(error.message);
+      toast.error(error.message); // Show error if API call fails
     }
   };
 
-  // function to send message to selected user
+  // ---------------- SEND MESSAGE ----------------
   const sendMessage = async (messageData) => {
     try {
-      // Make an HTTP POST request to backend API to send message to the selected user
-      // "selectedUser._id" is the recipient's ID
-      // "messageData" contains the message content (like text, timestamp, etc.)
+      // If no user is selected, prevent sending
+      if (!selectedUser?._id) {
+        toast.error("No user selected!");
+        return;
+      }
+
+      // Add senderId to the message payload
+      const payload = {
+        ...messageData,
+        senderId: authUser._id,
+      };
+
+      // Send message to backend API
       const { data } = await axios.post(
         `/api/messages/send/${selectedUser._id}`,
-        messageData
+        payload
       );
 
-      // If backend confirms message was successfully sent
       if (data.success) {
-        // Add the newly sent message to local state 'messages'
-        // (prevMessages = previous messages, then append new one at end)
-        getMessages((prevMessages) => [...prevMessages, data.newMessage]);
+        // Update local messages state
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : []; // Ensure prev is an array
+          if (safePrev.some((m) => m._id === data.newMessage._id))
+            return safePrev; // Prevent duplicate
+          return [...safePrev, data.newMessage]; // Add new message
+        });
+
+        // Emit message through socket for real-time delivery
+        if (socket) socket.emit("sendMessage", data.newMessage);
       } else {
-        // If backend responded with failure, show error toast
-        toast.error(data.message);
+        toast.error(data.message); // Show error from backend if any
       }
     } catch (error) {
-      // If network error / server error occurs, show the error message
-      toast.error(error.message);
+      toast.error(error.message); // Show network/API errors
     }
   };
 
-  // function to subscribe to messages for selected user
-  const subscribeToMessages = async () => {
-    // If socket connection is not available, just exit
+  // ---------------- SOCKET: LISTEN FOR NEW MESSAGE ----------------
+  useEffect(() => {
     if (!socket) return;
 
-    // Listen for "newMessage" event coming from socket server
-    socket.on("newMessage", (newMessage) => {
-      // Case 1: If a user is selected in chat AND
-      // the incoming message is from that selected user
-      if (selectedUser && newMessage.senderId === selectedUser._id) {
-        // Mark this message as seen immediately
+    // Function to handle receiving a new message
+    const handleNewMessage = (newMessage) => {
+      // Check if the message is for the currently selected user
+      const isForSelected =
+        selectedUser && newMessage.senderId === selectedUser._id;
+
+      if (isForSelected) {
+        // Mark message as seen
         newMessage.seen = true;
 
-        // Add it to the 'messages' state (append to existing conversation)
-        getMessages((prevMessages) => [...prevMessages, newMessage]);
+        setMessages((prev) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          if (safePrev.some((m) => m._id === newMessage._id)) return safePrev; // Prevent duplicates
+          return [...safePrev, newMessage]; // Add new message to chat
+        });
 
-        // Update backend to mark this message as "seen" in DB
+        // Mark message as seen in backend
         axios.put(`/api/messages/mark/${newMessage._id}`);
-      }
-      // Case 2: If message is from some other user (not the one currently selected)
-      else {
-        // Update unseen messages count for that sender
-        // If already has unseen count, increment it by 1
-        // Otherwise, initialize with 1
-        setUnseenMessages((prevUnseenMessages) => ({
-          ...prevUnseenMessages,
-          [newMessage.senderId]: prevUnseenMessages[newMessage.senderId]
-            ? prevUnseenMessages[newMessage.senderId] + 1
+      } else {
+        // If message is from another user, increment unseen message count
+        setUnseenMessages((prev) => ({
+          ...prev,
+          [newMessage.senderId]: prev[newMessage.senderId]
+            ? prev[newMessage.senderId] + 1
             : 1,
         }));
       }
-    });
-  };
+    };
 
-  // Function to unsubscribe from messages
-  const unsubscribeFromMessages = () => {
-    // If socket connection exists, remove the "newMessage" event listener
-    // This prevents duplicate listeners when component re-renders or unmounts
-    if (socket) socket.off("newMessage");
-  };
+    // Listen for 'newMessage' event from socket
+    socket.on("newMessage", handleNewMessage);
 
-  // React hook that runs side effects when 'socket' or 'selectedUser' changes
+    // Clean up listener when component unmounts
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+    // selectedUser is dynamically checked inside the handler
+  }, [socket, axios, selectedUser]);
+
+  // ---------------- SOCKET: ONLINE/OFFLINE STATUS ----------------
+  // (This second effect is redundant for 'newMessage', but may be used for status updates)
   useEffect(() => {
-    // Subscribe to incoming messages when socket or selected user changes
-    subscribeToMessages();
+    if (!socket) return;
 
-    // Cleanup function: unsubscribe when component unmounts
-    // OR before re-running the effect (to avoid memory leaks / multiple listeners)
-    return () => unsubscribeFromMessages();
+    const handleNewMessage = (newMessage) => {
+      const isForSelected =
+        selectedUser && newMessage.senderId === selectedUser._id;
 
-    // Dependencies: effect re-runs whenever 'socket' or 'selectedUser' changes
-  }, [socket, selectedUser]);
+      setMessages((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
 
-  // Create a value object that holds all states and functions
-  // This will be accessible anywhere inside ChatContext
+        // Prevent duplicate messages
+        if (safePrev.some((m) => m._id === newMessage._id)) return safePrev;
+
+        if (isForSelected) {
+          newMessage.seen = true;
+          axios.put(`/api/messages/mark/${newMessage._id}`);
+        } else {
+          setUnseenMessages((prevUnseen) => ({
+            ...prevUnseen,
+            [newMessage.senderId]: prevUnseen[newMessage.senderId]
+              ? prevUnseen[newMessage.senderId] + 1
+              : 1,
+          }));
+        }
+
+        return [...safePrev, newMessage];
+      });
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, axios]);
+
+  // ---------------- PROVIDE CONTEXT VALUE ----------------
+  // All state and functions that need to be shared globally
   const value = {
-    messages, // chat messages
-    getMessages,
-    users, // list of users
+    messages,
+    setMessages,
+    users,
     setUsers,
-    selectedUser, // active chat user
+    selectedUser,
     setSelectedUser,
     unseenMessages,
     setUnseenMessages,
-    getUsers, // function to fetch users
-    socket, // expose socket for real-time chat
+    getUsers,
     sendMessage,
+    socket,
   };
 
-  // Return the Provider component
-  // It shares `value` with all children wrapped inside ChatProvider
+  // Provide the ChatContext to children components
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
