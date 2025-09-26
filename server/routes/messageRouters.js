@@ -1,27 +1,30 @@
 import express from "express";
-
 import {
+  deleteChat,
   getMessages,
   getUsersForSidebar,
   markMessageAsSeen,
   sendMessage,
 } from "../controllers/messageController.js";
-
 import { protectRoute } from "../middleware/auth.js";
 
-// Create a new Express Router instance for message-related routes
 const messageRouter = express.Router();
 
-// Route to fetch all users for the sidebar (only accessible if user is authenticated)
+// ---------------- ROUTES ----------------
+
+// Fetch all users for sidebar
 messageRouter.get("/users", protectRoute, getUsersForSidebar);
 
-// Route to get all messages with a specific user (id = userId passed in URL)
+// Get all messages with a specific user
 messageRouter.get("/:id", protectRoute, getMessages);
 
-// Route to mark a specific message as "seen" (id = messageId passed in URL)
+// Mark a specific message as seen
 messageRouter.put("/mark/:id", protectRoute, markMessageAsSeen);
 
+// Send a new message
 messageRouter.post("/send/:id", protectRoute, sendMessage);
 
-// Export the router so it can be used in the main server file (app.js / index.js)
+// Delete chat with a specific user
+messageRouter.delete("/:id", protectRoute, deleteChat);
+
 export default messageRouter;

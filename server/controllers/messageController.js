@@ -3,151 +3,131 @@ import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { io, userSocketMap } from "../server.js";
 
-// Controller: Get all users for sidebar (except the logged-in user)
-// Also count unseen messages from each user
+// ---------------- GET USERS FOR SIDEBAR ----------------
 export const getUsersForSidebar = async (req, res) => {
   try {
-    // Get logged-in user's ID from req.user (set by auth middleware)
-    const userId = req.user._id;
+    const userId = req.user._id; // current logged-in user
 
-    // Fetch all users except the logged-in one, exclude password field
+    // Fetch all users except the logged-in one
     const filteredUsers = await User.find({ _id: { $ne: userId } }).select(
       "-password"
     );
 
-    // Object to store unseen messages count for each user
+    // Prepare unseen messages count
     const unseenMessages = {};
 
-    // For each user, fetch unseen messages they sent to logged-in user
+    // For each user, count unseen messages sent to me
     const promises = filteredUsers.map(async (user) => {
       const messages = await Message.find({
-        senderId: user._id, // Messages sent by this user
-        receiverId: userId, // To the logged-in user
-        seen: false, // That are still unseen
+        senderId: user._id,
+        receiverId: userId,
+        seen: false,
       });
-
-      // If user has unseen messages, store the count
-      if (messages.length > 0) {
-        unseenMessages[user._id] = messages.length;
-      }
+      unseenMessages[user._id] = messages.length || 0;
     });
 
-    // Run all async DB queries in parallel and wait for completion
     await Promise.all(promises);
 
-    // Send back user list and unseen messages info
     res.json({ success: true, users: filteredUsers, unseenMessages });
   } catch (error) {
-    // Log error and send failure response
-    console.log(error.message);
     res.json({ success: false, message: error.message });
   }
 };
 
-// Controller: Get all messages between logged-in user and a selected user
+// ---------------- GET MESSAGES ----------------
 export const getMessages = async (req, res) => {
   try {
-    // Extract selected user ID from request parameters
-    // Example: /api/messages/:id  →  req.params.id
-    const { id: selectedUserId } = req.params;
+    const { id: selectedUserId } = req.params; // chat partner ID
+    const myId = req.user._id; // logged-in user ID
 
-    // Get logged-in user's ID (added to req.user by auth middleware)
-    const myId = req.user._id;
-
-    // Fetch all messages exchanged between logged-in user and selected user
-    // $or ensures we get both directions:
-    // 1) my messages to them, 2) their messages to me
+    // Fetch all messages between me and selected user
     const messages = await Message.find({
       $or: [
-        { senderId: myId, receiverId: selectedUserId }, // I sent them
-        { senderId: selectedUserId, receiverId: myId }, // They sent me
+        { senderId: myId, receiverId: selectedUserId },
+        { senderId: selectedUserId, receiverId: myId },
       ],
-    });
+    }).sort({ createdAt: 1 }); // sort by time
 
-    // Mark all messages from selected user to me as "seen"
-    // updateMany → updates all matching messages
+    // Mark as seen: messages they sent to me
     await Message.updateMany(
-      { senderId: selectedUserId, receiverId: myId }, // Only messages they sent to me
-      { seen: true } // Set seen = true
+      { senderId: selectedUserId, receiverId: myId },
+      { seen: true }
     );
 
-    // Send success response with all messages
     res.json({ success: true, messages });
   } catch (error) {
-    // If error occurs, log error message in console
-    console.log(error.message);
-
-    // Send failure response with error message
     res.json({ success: false, message: error.message });
   }
 };
 
-// API: Mark a specific message as seen using its message ID
+// ---------------- MARK MESSAGE AS SEEN ----------------
 export const markMessageAsSeen = async (req, res) => {
   try {
-    // Extract message ID from request parameters
-    // Example: /api/messages/mark-seen/:id → req.params.id
-    const { id } = req.params;
-
-    // Find the message by its ID and update its "seen" field to true
-    await Message.findByIdAndUpdate(id, { seen: true });
-
-    // Send success response back to client
-    res.json({ success: true });
+    const { id } = req.params; // message ID
+    const updatedMessage = await Message.findByIdAndUpdate(
+      id,
+      { seen: true },
+      { new: true }
+    );
+    res.json({ success: true, message: updatedMessage });
   } catch (error) {
-    // If an error occurs, log it to the server console
-    console.log(error.message);
-
-    // Send failure response with error message
     res.json({ success: false, message: error.message });
   }
 };
 
-// Controller function to send a message to the selected user
+// ---------------- SEND MESSAGE ----------------
 export const sendMessage = async (req, res) => {
   try {
-    // Extract text and image from the request body (message content sent by frontend)
-    const { text, image } = req.body;
+    const { text, image } = req.body; // message content
+    const receiverId = req.params.id; // receiver from URL
+    const senderId = req.user._id; // sender = logged-in user
 
-    // Get the receiver's ID from the URL parameter (example: /messages/send/:id)
-    const receiverId = req.params.id;
-
-    // Get the sender's ID from the logged-in user (set by protectRoute middleware)
-    const senderId = req.user._id;
-
-    // Variable to hold image URL (if an image is provided by sender)
-    let imageUrl;
-
-    // If the user attached an image, upload it to Cloudinary
+    // Upload image if provided
+    let imageUrl = null;
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image);
-      // Store the secure URL returned from Cloudinary
       imageUrl = uploadResponse.secure_url;
     }
 
-    // Create a new message document in the database with sender, receiver, text, and optional image
+    // Save message in DB
     const newMessage = await Message.create({
-      senderId, // Who sent the message
-      receiverId, // Who should receive the message
-      text, // The text content
-      image: imageUrl, // Image link if provided, otherwise undefined
+      senderId,
+      receiverId,
+      text,
+      image: imageUrl || null,
     });
 
-    // Find the receiver's socket ID (from userSocketMap which stores online users)
+    // Get receiver’s socket (if online)
     const receiverSocketId = userSocketMap[receiverId];
 
-    // If the receiver is online, send (emit) the new message to their socket in real-time
+    // Push new message to receiver instantly
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
-    // Send success response back to the sender with the newly created message
+    // Also return new message to sender
     res.json({ success: true, newMessage });
   } catch (error) {
-    // If something goes wrong, log the error in server console
-    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
 
-    // Send failure response to the client with error details
+// ---------------- DELETE CHAT ----------------
+export const deleteChat = async (req, res) => {
+  try {
+    const { id: selectedUserId } = req.params; // chat partner
+    const myId = req.user._id; // logged-in user
+
+    // Delete all messages where (me ↔ selectedUser)
+    await Message.deleteMany({
+      $or: [
+        { senderId: myId, receiverId: selectedUserId },
+        { senderId: selectedUserId, receiverId: myId },
+      ],
+    });
+
+    res.json({ success: true, message: "Chat deleted successfully" });
+  } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };

@@ -1,50 +1,65 @@
-// Import jsonwebtoken library for verifying JWT tokens
+// Import the jsonwebtoken library to work with JWT tokens
 import jwt from "jsonwebtoken";
 
-// Import User model to fetch user details from the database
+// Import the User model to fetch user details from the database
 import User from "../models/User.js";
 
 // ===============================
-// Middleware to protect routes
+// Middleware: protectRoute
 // ===============================
-// - This function ensures that only authenticated users can access certain routes.
-// - It verifies the token, fetches the user, and attaches user info to req object.
+// - This function protects certain routes by checking for a valid JWT token.
+// - If the token is valid → fetch user from DB and allow access.
+// - If not → block access and return an error response.
 export const protectRoute = async (req, res, next) => {
   try {
-    // Step 1: Get token from request headers
-    // Example: In frontend you send `headers: { token: "jwtTokenHere" }`
+    // Step 1: Extract token from request headers
+    // In frontend, you must send: headers: { token: "jwtTokenHere" }
     const token = req.headers.token;
 
-    // Step 2: Verify the token using JWT and secret key
-    // If invalid or expired, jwt.verify() will throw an error
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Step 3: Find the user from database using the decoded userId
-    // ".select('-password')" ensures password field is excluded for security
-    const user = await User.findById(decoded.userId).select("-password");
-
-    // Step 4: If user does not exist in DB, send error response
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
+    // Step 2: If token is missing, return error immediately
+    if (!token) {
+      return res
+        .status(401) // Unauthorized status code
+        .json({ success: false, message: "JWT must be provided" });
     }
 
-    // Step 5: Attach user data to req object so next middleware/controllers can use it
+    // Step 3: Verify the token using the secret key
+    // - jwt.verify() decodes the token if valid
+    // - If invalid/expired → throws an error that goes to catch block
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Step 4: Find the user in the database using decoded.userId
+    // - ".select('-password')" ensures the password field is not returned for security
+    const user = await User.findById(decoded.userId).select("-password");
+
+    // Step 5: If no user is found in DB, send an error response
+    if (!user) {
+      return res
+        .status(404) // Not found
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Step 6: Attach user info to req object
+    // - This way, controllers that run after this middleware can access `req.user`
     req.user = user;
 
-    // Step 6: Call next() to pass control to the next middleware or controller
+    // Step 7: Call next() to continue request flow
+    // - If everything is fine, request moves on to the next middleware/controller
     next();
   } catch (error) {
-    // If any error occurs (invalid token, expired token, etc.), log and send response
-    console.log(error.message);
-    res.json({ success: false, message: error.message });
+    // Step 8: Handle any errors (e.g., invalid token, expired token)
+    console.log(error.message); // Logs the error in server console
+    res
+      .status(401) // Unauthorized
+      .json({ success: false, message: error.message });
   }
 };
 
 // ===============================
-// Controller to check authentication
+// Controller: checkAuth
 // ===============================
-// - This endpoint is used to confirm if a user is authenticated.
-// - It simply returns the user info that protectRoute middleware attached to req.
+// - This endpoint simply confirms if a user is authenticated.
+// - It returns the user info attached by protectRoute middleware.
 export const checkAuth = (req, res) => {
   res.json({ success: true, user: req.user });
 };

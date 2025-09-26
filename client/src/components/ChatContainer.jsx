@@ -14,72 +14,126 @@ import { ChatContext } from "../../context/ChatContext";
 import assets from "../assets/assets";
 import { formatMessageTime } from "../lib/utils";
 
+// Helper utilities to compute a friendly display name
+const capitalize = (s) =>
+  typeof s === "string" && s.length
+    ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+    : s;
+
+const extractNameFromEmail = (email) => {
+  if (!email || typeof email !== "string") return null;
+  const local = email.split("@")[0];
+  const parts = local.split(/[._\-+]+/).filter(Boolean);
+  if (parts.length === 0) return null;
+  return parts.map((p) => capitalize(p.replace(/\d+/g, ""))).join(" ");
+};
+
+const getDisplayName = (user) => {
+  if (!user || typeof user !== "object") return "Unknown User";
+
+  const fullCandidates = [
+    user.fullname,
+    user.fullName,
+    user.full_name,
+    user.displayName,
+    user.display_name,
+    user.name,
+    user.username,
+    user.userName,
+  ];
+  for (const n of fullCandidates) {
+    if (n && typeof n === "string" && n.trim()) return n.trim();
+  }
+
+  const firstCandidates = [
+    user.firstName,
+    user.first_name,
+    user.firstname,
+    user.givenName,
+    user.given_name,
+  ];
+  const lastCandidates = [
+    user.lastName,
+    user.last_name,
+    user.lastname,
+    user.surname,
+    user.familyName,
+    user.family_name,
+  ];
+  const first = firstCandidates.find((v) => v && v.trim());
+  const last = lastCandidates.find((v) => v && v.trim());
+  if (first) {
+    return `${capitalize(first)}${last ? " " + capitalize(last) : ""}`;
+  }
+
+  const nested = user.profile || user.details || user.meta || user.user || {};
+  const firstN =
+    nested.firstName ||
+    nested.first_name ||
+    nested.firstname ||
+    nested.givenName ||
+    nested.given_name;
+  const lastN =
+    nested.lastName ||
+    nested.last_name ||
+    nested.lastname ||
+    nested.surname ||
+    nested.familyName;
+  if (firstN) {
+    return `${capitalize(firstN)}${lastN ? " " + capitalize(lastN) : ""}`;
+  }
+
+  if (user.email && typeof user.email === "string") {
+    const derived = extractNameFromEmail(user.email);
+    if (derived) return derived;
+    return user.email;
+  }
+
+  return "Unknown User";
+};
+
 // -------------------- CHAT CONTAINER COMPONENT --------------------
 const ChatContainer = () => {
-  // ---------------- CONTEXT --------------------
-  // Get chat-related data and functions from ChatContext
   const { messages, selectedUser, setSelectedUser, sendMessage, setMessages } =
     useContext(ChatContext);
-
-  // Get auth-related data from AuthContext
   const { authUser, onlineUsers } = useContext(AuthContext);
 
-  // ---------------- STATE & REFS --------------------
-  // input: stores the text typed in the chat input box
   const [input, setInput] = useState("");
-
-  // scrollEnd: reference to automatically scroll to bottom of chat
   const scrollEnd = useRef();
 
-  // -------------------- FUNCTIONS --------------------
-
-  // Function to send text messages
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault(); // Prevent form submission reload
-    if (!input.trim()) return; // Do nothing if input is empty
-
-    // Call sendMessage from ChatContext
+    if (e) e.preventDefault();
+    if (!input.trim()) return;
     await sendMessage({ text: input.trim() });
-
-    // Clear input box after sending
     setInput("");
   };
 
-  // Function to send image messages
   const handleSendImage = async (e) => {
-    const file = e.target.files[0]; // Get the selected file
-
-    // Validate that it is an image
+    const file = e.target.files[0];
     if (!file || !file.type.startsWith("image/")) {
       toast.error("Please select a valid image file");
       return;
     }
-
-    // Convert image to base64 to send
     const reader = new FileReader();
     reader.onloadend = async () => {
-      await sendMessage({ image: reader.result }); // Send image message
-      e.target.value = ""; // Reset file input
+      await sendMessage({ image: reader.result });
+      e.target.value = "";
     };
-    reader.readAsDataURL(file); // Read file as base64 string
+    reader.readAsDataURL(file);
   };
 
-  // Fetch messages when selectedUser changes
   useEffect(() => {
     if (selectedUser) {
-      setMessages(selectedUser._id); // Update messages for selected user
+      setMessages(selectedUser._id);
     }
   }, [selectedUser]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (scrollEnd.current && messages) {
-      scrollEnd.current.scrollIntoView({ behavior: "smooth" }); // Smooth scroll
+      scrollEnd.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // -------------------- JSX / UI --------------------
-  // Show placeholder if no user is selected
   if (!selectedUser) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 text-gray-500 bg-white/10 max-md:hidden">
@@ -89,24 +143,31 @@ const ChatContainer = () => {
     );
   }
 
+  const displayName = getDisplayName(selectedUser);
+
   return (
     <div className="h-full overflow-scroll relative backdrop-blur-lg">
       {/* -------------------- HEADER -------------------- */}
       <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
-        {/* Selected user's profile picture */}
         <img
           src={selectedUser.profilePic || assets.avatar_icon}
           alt="Profile"
           className="w-10 h-10 rounded-full object-cover border border-white"
         />
 
-        {/* Selected user's name and online status */}
-        <p className="flex-1 text-lg text-white flex items-center gap-2">
-          {selectedUser.fullname}
+        <p className="text-lg text-white flex items-center gap-2 truncate">
+          {displayName}
           {onlineUsers.includes(selectedUser._id) && (
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span className="w-2 h-2 rounded-full bg-green-500" />
           )}
         </p>
+
+        {/* Help icon restored to the right side */}
+        <img
+          src={assets.help_icon}
+          alt="Help"
+          className="hidden md:block w-5 ml-auto"
+        />
 
         {/* Back button for mobile */}
         <img
@@ -115,20 +176,12 @@ const ChatContainer = () => {
           alt="Back"
           className="md:hidden w-7 cursor-pointer"
         />
-
-        {/* Help icon for desktop */}
-        <img
-          src={assets.help_icon}
-          alt="Help"
-          className="hidden md:block w-5"
-        />
       </div>
 
       {/* -------------------- CHAT AREA -------------------- */}
       <div className="flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6">
-        {/* Loop through messages */}
         {(Array.isArray(messages) ? messages : []).map((msg, idx) => {
-          const isOutgoing = msg.senderId === authUser._id; // Check if message is sent by me
+          const isOutgoing = msg.senderId === authUser._id;
 
           return (
             <div
@@ -137,7 +190,6 @@ const ChatContainer = () => {
                 isOutgoing ? "flex-row-reverse" : "flex-row"
               }`}
             >
-              {/* Avatar and timestamp */}
               <div className="text-center text-xs">
                 <img
                   src={
@@ -153,7 +205,6 @@ const ChatContainer = () => {
                 </p>
               </div>
 
-              {/* Message content */}
               {msg.image ? (
                 <img
                   src={msg.image}
@@ -172,13 +223,11 @@ const ChatContainer = () => {
             </div>
           );
         })}
-        {/* Dummy div for auto-scroll */}
-        <div ref={scrollEnd}></div>
+        <div ref={scrollEnd} />
       </div>
 
       {/* -------------------- INPUT AREA -------------------- */}
       <div className="absolute bottom-0 left-0 w-full flex items-center gap-3 p-3 bg-transparent">
-        {/* Text input and image upload */}
         <div className="flex-1 flex items-center bg-[#1a1a1a] px-3 rounded-full hover:border hover:border-[#026c7a]">
           <input
             onChange={(e) => setInput(e.target.value)}
@@ -189,7 +238,6 @@ const ChatContainer = () => {
             className="flex-1 text-sm py-3 border-none outline-none text-white placeholder-gray-400 bg-transparent"
           />
 
-          {/* Hidden file input for image */}
           <input
             onChange={handleSendImage}
             type="file"
@@ -206,7 +254,6 @@ const ChatContainer = () => {
           </label>
         </div>
 
-        {/* Send button */}
         <button
           onClick={handleSendMessage}
           className="bg-[#2e464c] hover:bg-[#074553] rounded-full p-2 flex items-center justify-center"
@@ -218,5 +265,4 @@ const ChatContainer = () => {
   );
 };
 
-// Export the ChatContainer component for use in other parts of app
 export default ChatContainer;

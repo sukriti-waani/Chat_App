@@ -1,35 +1,48 @@
-import assets, { imagesDummyData } from "../assets/assets";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../../context/AuthContext";
+import { ChatContext } from "../../context/ChatContext";
+import assets from "../assets/assets";
 
-const RightSidebar = ({ selectedUser }) => {
-  if (!selectedUser) return null;
+const RightSidebar = () => {
+  const { selectedUser, messages } = useContext(ChatContext);
+  const { logout, onlineUsers } = useContext(AuthContext);
+  const [msgImages, setMsgImages] = useState([]);
+
+  useEffect(() => {
+    // Defensive check: only run filter if messages is really an array
+    if (Array.isArray(messages)) {
+      setMsgImages(messages.filter((msg) => msg.image).map((msg) => msg.image));
+    } else {
+      setMsgImages([]);
+    }
+  }, [messages]);
 
   return (
-    <div className="bg-[#8185B2]/10 text-white w-full h-full max-md:hidden p-6 flex flex-col">
-      {/* Profile Section */}
-      <div className="flex flex-col items-center gap-4 text-xs font-light mx-auto max-w-xs">
-        <img
-          src={selectedUser.profilePic || assets.avatar_icon}
-          alt="User Avatar"
-          className="w-20 aspect-square rounded-full object-cover"
-        />
-        <h1 className="text-xl font-medium flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-          {selectedUser.fullname}
-        </h1>
-        <p className="text-center">{selectedUser.bio}</p>
-      </div>
+    selectedUser && (
+      <div className="bg-[#8185B2]/10 text-white w-full h-full max-md:hidden p-6 flex flex-col">
+        {/* Profile Section */}
+        <div className="flex flex-col items-center gap-4 text-xs font-light mx-auto max-w-xs">
+          <img
+            src={selectedUser?.profilePic || assets.avatar_icon}
+            alt="User Avatar"
+            className="w-20 aspect-square rounded-full object-cover"
+          />
+          <h1 className="text-xl font-medium flex items-center gap-2">
+            {onlineUsers.includes(selectedUser._id) && (
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            )}
+            {selectedUser.fullname}
+          </h1>
+          <p className="text-center">{selectedUser.bio}</p>
+        </div>
 
-      <hr className="border-[#ffffff50] my-6" />
+        <hr className="border-[#ffffff50] my-6" />
 
-      {/* Media Section */}
-      <div className="px-2 text-xs flex-1 overflow-y-auto">
-        <p className="font-medium mb-2">Media</p>
-        <div className="grid grid-cols-2 gap-3 opacity-80 rounded-md p-1">
-          {imagesDummyData.slice(0, 4).map(
-            (
-              url,
-              index // limiting count to make it look smaller
-            ) => (
+        {/* Media Section */}
+        <div className="px-2 text-xs flex-1 overflow-y-auto">
+          <p className="font-medium mb-2">Media</p>
+          <div className="grid grid-cols-2 gap-3 opacity-80 rounded-md p-1">
+            {msgImages.map((url, index) => (
               <div
                 key={index}
                 onClick={() => window.open(url, "_blank")}
@@ -41,18 +54,21 @@ const RightSidebar = ({ selectedUser }) => {
                   className="w-full h-full object-cover rounded-md"
                 />
               </div>
-            )
-          )}
+            ))}
+          </div>
+        </div>
+
+        {/* Logout Button */}
+        <div className="mt-4">
+          <button
+            onClick={() => logout()}
+            className="w-full bg-gradient-to-r from-[#0394a7] to-[#024b57] hover:from-[#026c7a] hover:to-[#012f35] text-white text-sm font-light py-2 px-6 rounded-full cursor-pointer"
+          >
+            Logout
+          </button>
         </div>
       </div>
-
-      {/* Logout Button - fixed outside scroll */}
-      <div className="mt-4">
-        <button className="w-full bg-gradient-to-r from-[#0394a7] to-[#024b57] hover:from-[#026c7a] hover:to-[#012f35] text-white text-sm font-light py-2 px-6 rounded-full cursor-pointer">
-          Logout
-        </button>
-      </div>
-    </div>
+    )
   );
 };
 
