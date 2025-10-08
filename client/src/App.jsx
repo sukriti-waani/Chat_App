@@ -23,7 +23,7 @@ const App = () => {
   const { authUser } = useContext(AuthContext);
 
   return (
-    <div className="bg-[url(/bg.jpg)] bg-contain h-screen w-full  bg-center bg-no-repeat ">
+    <div className="bg-[url(/bg.jpg)] bg-contain h-screen w-full bg-center bg-no-repeat ">
       {/* Toaster is used for showing success/error popups */}
       <Toaster />
 
